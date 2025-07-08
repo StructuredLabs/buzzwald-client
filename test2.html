@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buzzwald Widget Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .content {
+            background-color: #f5f5f5;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .footer {
+            text-align: center;
+            color: #666;
+            margin-top: 40px;
+        }
+        h1 {
+            color: #333;
+        }
+        h2 {
+            color: #555;
+            margin-top: 30px;
+        }
+        p {
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Buzzwald Widget Test Page</h1>
+        <p>This page is for testing the Buzzwald widget integration.</p>
+    </div>
+
+    <div class="content">
+        <h2>Sample Content</h2>
+        <p>
+            This is a sample page with some content to demonstrate how the Buzzwald widget 
+            appears alongside regular page content. The widget should appear in the bottom-right 
+            corner with a yellow background and black icon.
+        </p>
+        
+        <h2>Widget Configuration</h2>
+        <p>The widget is configured with the following settings:</p>
+        <ul>
+            <li><strong>Position:</strong> bottom-right</li>
+            <li><strong>Background Color:</strong> #FFFF00 (yellow)</li>
+            <li><strong>Icon Color:</strong> #000000 (black)</li>
+        </ul>
+
+        <h2>Testing Instructions</h2>
+        <p>
+            Open this page in your browser and look for the Buzzwald widget in the bottom-right 
+            corner. You should be able to interact with it to test its functionality.
+        </p>
+    </div>
+
+    <div class="footer">
+        <p>Buzzwald Widget Test - Check the bottom-right corner for the widget</p>
+    </div>
+
+    <!-- Buzzwald Widget Configuration -->
+    <script>
+        window.BuzzwaldConfig = {
+            apiKey: 'customer-api-key-here',
+            vapiKey: 'd6a96be9-4c92-46f4-a3ce-df34cdf017e2',
+            position: 'bottom-right', // optional
+            backgroundColor: '#FFFF00', // optional
+            iconColor: '#000000' // optional
+        };
+    </script>
+    
+    <!-- Buzzwald Widget Script -->
+    <script src="https://cdn.jsdelivr.net/gh/StructuredLabs/buzzwald-client@latest/dist/widget.iife.js"></script>
+</body>
+</html>

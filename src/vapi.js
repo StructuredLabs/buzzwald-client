@@ -11,17 +11,21 @@ export class VapiClient {
   async loadVapiSDK() {
     try {
       // Load Vapi Web SDK if not already loaded
-      if (typeof window.Vapi === 'undefined') {
-        await this.loadScript('https://cdn.jsdelivr.net/npm/@vapi-ai/web@latest/dist/index.js');
+      if (typeof window.vapiSDK === 'undefined') {
+        await this.loadScript('https://cdn.jsdelivr.net/gh/VapiAI/html-script-tag@latest/dist/assets/index.js');
       }
       
-      // Verify Vapi is available
-      if (typeof window.Vapi === 'undefined') {
+      // Verify Vapi SDK is available
+      if (typeof window.vapiSDK === 'undefined') {
         throw new Error('Failed to load Vapi SDK');
       }
       
       // Initialize Vapi client
-      this.vapi = new window.Vapi(this.config.apiKey);
+      this.vapi = window.vapiSDK.run({
+        apiKey: this.config.apiKey,
+        assistant: this.config.assistant, // We'll need to add this to config
+        config: {}
+      });
 
       this.setupEventListeners();
     } catch (error) {
@@ -108,28 +112,8 @@ export class VapiClient {
     }
 
     try {
-      // Start call with configuration
-      await this.vapi.start({
-        // Basic call configuration
-        model: {
-          provider: 'openai',
-          model: 'gpt-3.5-turbo',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a helpful assistant. Keep responses brief and natural for a phone conversation.'
-            }
-          ]
-        },
-        voice: {
-          provider: 'azure',
-          voiceId: 'andrew'
-        },
-        // If phoneNumber is provided, make it an outbound call
-        ...(this.config.phoneNumber && {
-          phoneNumber: this.config.phoneNumber
-        })
-      });
+      // Start call using Vapi SDK
+      await this.vapi.start();
     } catch (error) {
       console.error('Failed to start Vapi call:', error);
       throw error;

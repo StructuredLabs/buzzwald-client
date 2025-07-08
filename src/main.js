@@ -21,6 +21,11 @@ import { BuzzwaldWidget } from './widget.js';
         console.error('Buzzwald: vapiKey is required in window.BuzzwaldConfig');
         return;
       }
+      
+      if (!config.mockMode && !config.assistant) {
+        console.error('Buzzwald: assistant is required in window.BuzzwaldConfig');
+        return;
+      }
 
       // Create and initialize widget
       window.buzzwaldWidget = new BuzzwaldWidget(config);
