@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buzzwald Widget Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .config-section {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .config-section h2 {
+            margin-top: 0;
+            color: #555;
+        }
+        pre {
+            background: #e8e8e8;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .test-controls {
+            margin: 20px 0;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .content {
+            min-height: 80vh;
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Buzzwald Widget Test Page</h1>
+        
+        <div class="warning">
+            <strong>Mock Mode Enabled:</strong> This test page is running in mock mode - no Vapi key required! 
+            Click the phone button to see the widget in action. To use real Vapi, add your API key and set mockMode to false.
+        </div>
+
+        <div class="config-section">
+            <h2>Configuration</h2>
+            <p>The widget is configured via <code>window.BuzzwaldConfig</code>:</p>
+            <pre id="config-display"></pre>
+        </div>
+
+        <div class="test-controls">
+            <h2>Test Controls</h2>
+            <button onclick="testWidget()">Test Widget</button>
+            <button onclick="destroyWidget()">Destroy Widget</button>
+            <button onclick="reinitializeWidget()">Reinitialize Widget</button>
+        </div>
+
+        <div class="content">
+            <h2>Test Content</h2>
+            <p>This is a test page to demonstrate the Buzzwald widget functionality.</p>
+            <p>The widget should appear as a floating phone button in the bottom-right corner.</p>
+            <p>Click the phone button to initiate a call via Vapi.</p>
+            
+            <h3>Expected Behavior:</h3>
+            <ul>
+                <li>Yellow circular button with black phone icon</li>
+                <li>Fixed positioning in bottom-right corner</li>
+                <li>Hover effects (scale and shadow)</li>
+                <li>Click to start call</li>
+                <li>Visual feedback during call states</li>
+            </ul>
+
+            <h3>Call States:</h3>
+            <ul>
+                <li><strong>Idle:</strong> Yellow background, phone icon</li>
+                <li><strong>Connecting:</strong> Pulsing animation</li>
+                <li><strong>Connected:</strong> Green background</li>
+                <li><strong>Ended:</strong> Red background (briefly)</li>
+            </ul>
+
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+            
+            <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+        </div>
+    </div>
+
+    <script>
+        // Configuration for the widget
+        window.BuzzwaldConfig = {
+            vapiKey: 'your-vapi-key-here', // Add your Vapi API key
+            phoneNumber: '+1234567890',
+            position: 'bottom-right',
+            backgroundColor: '#FFFF00',
+            iconColor: '#000000',
+            mockMode: true // Enable mock mode for testing without Vapi key
+        };
+
+        // Display configuration
+        document.getElementById('config-display').textContent = JSON.stringify(window.BuzzwaldConfig, null, 2);
+
+        // Test functions
+        function testWidget() {
+            if (window.buzzwaldWidget) {
+                console.log('Widget is already initialized');
+                alert('Widget is already initialized. Check the bottom-right corner.');
+            } else {
+                console.log('Widget not found. Make sure the widget script is loaded.');
+                alert('Widget not found. Make sure the widget script is loaded.');
+            }
+        }
+
+        function destroyWidget() {
+            if (window.buzzwaldDestroy) {
+                window.buzzwaldDestroy();
+                console.log('Widget destroyed');
+                alert('Widget destroyed');
+            } else {
+                console.log('Widget destroy function not available');
+                alert('Widget destroy function not available');
+            }
+        }
+
+        function reinitializeWidget() {
+            if (window.buzzwaldDestroy) {
+                window.buzzwaldDestroy();
+                setTimeout(() => {
+                    // Reload the widget script
+                    const script = document.createElement('script');
+                    script.src = '/src/main.js';
+                    script.type = 'module';
+                    document.head.appendChild(script);
+                    console.log('Widget reinitialized');
+                    alert('Widget reinitialized');
+                }, 100);
+            } else {
+                console.log('Widget destroy function not available');
+                alert('Widget destroy function not available');
+            }
+        }
+
+        // Load widget script in development mode
+        if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+            const script = document.createElement('script');
+            script.src = '/src/main.js';
+            script.type = 'module';
+            document.head.appendChild(script);
+        }
+    </script>
+</body>
+</html>
