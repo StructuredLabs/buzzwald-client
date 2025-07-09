@@ -1,61 +1,17 @@
+import Vapi from '@vapi-ai/web';
+
 export class VapiClient {
   constructor(config) {
     this.config = config;
     this.vapi = null;
     this.isCallActive = false;
     this.eventListeners = new Map();
-    
-    this.loadVapiSDK();
+    this.initVapi();
   }
 
-  async loadVapiSDK() {
-    try {
-      // Load Vapi Web SDK if not already loaded
-      if (typeof window.vapiSDK === 'undefined') {
-        await this.loadScript('https://cdn.jsdelivr.net/gh/VapiAI/html-script-tag@latest/dist/assets/index.js');
-      }
-      
-      // Verify Vapi SDK is available
-      if (typeof window.vapiSDK === 'undefined') {
-        throw new Error('Failed to load Vapi SDK');
-      }
-      
-      // Initialize Vapi client
-      this.vapi = window.vapiSDK.run({
-        apiKey: this.config.apiKey,
-        assistant: this.config.assistant, // We'll need to add this to config
-        config: {}
-      });
-
-      this.setupEventListeners();
-    } catch (error) {
-      console.error('Failed to load Vapi SDK:', error);
-      throw new Error('Voice service unavailable. Please try again later.');
-    }
-  }
-
-  loadScript(src) {
-    return new Promise((resolve, reject) => {
-      // Check if script is already loaded
-      const existingScript = document.querySelector(`script[src="${src}"]`);
-      if (existingScript) {
-        resolve();
-        return;
-      }
-
-      const script = document.createElement('script');
-      script.src = src;
-      script.onload = resolve;
-      script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
-      script.ontimeout = () => reject(new Error(`Script load timeout: ${src}`));
-      
-      // Add timeout
-      setTimeout(() => {
-        reject(new Error(`Script load timeout: ${src}`));
-      }, 10000);
-      
-      document.head.appendChild(script);
-    });
+  initVapi() {
+    this.vapi = new Vapi(this.config.apiKey);
+    this.setupEventListeners();
   }
 
   setupEventListeners() {
@@ -112,8 +68,8 @@ export class VapiClient {
     }
 
     try {
-      // Start call using Vapi SDK
-      await this.vapi.start();
+      // Start call using Vapi SDK with assistant ID
+      await this.vapi.start(this.config.assistant);
     } catch (error) {
       console.error('Failed to start Vapi call:', error);
       throw error;
@@ -141,7 +97,6 @@ export class VapiClient {
 
   off(event, callback) {
     if (!this.eventListeners.has(event)) return;
-    
     const listeners = this.eventListeners.get(event);
     const index = listeners.indexOf(callback);
     if (index > -1) {
@@ -151,7 +106,6 @@ export class VapiClient {
 
   emit(event, data) {
     if (!this.eventListeners.has(event)) return;
-    
     this.eventListeners.get(event).forEach(callback => {
       try {
         callback(data);

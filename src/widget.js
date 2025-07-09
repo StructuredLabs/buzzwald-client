@@ -3,14 +3,12 @@ import { VapiClient } from './vapi.js';
 export class BuzzwaldWidget {
   constructor(config = {}) {
     this.config = {
-      apiKey: '',
       vapiKey: '',
-      assistant: '', // Vapi assistant ID
+      assistant: '',
       phoneNumber: '',
       position: 'bottom-right',
       backgroundColor: '#FFFF00',
       iconColor: '#000000',
-      mockMode: false, // Set to true for testing without backend
       ...config
     };
 
@@ -266,6 +264,14 @@ export class BuzzwaldWidget {
           left: 15px;
         }
       }
+
+      /* Hide Vapi's default button */
+      .vapi-support-btn,
+      #vapi-support-btn,
+      [id*="vapi"],
+      [class*="vapi"] {
+        display: none !important;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -287,6 +293,37 @@ export class BuzzwaldWidget {
     // Add widget to DOM
     this.widgetElement.appendChild(this.buttonElement);
     document.body.appendChild(this.widgetElement);
+
+    // Hide any Vapi buttons that might appear
+    this.hideVapiButtons();
+  }
+
+  hideVapiButtons() {
+    // Function to hide Vapi buttons
+    const hideButtons = () => {
+      const vapiButtons = document.querySelectorAll('.vapi-support-btn, #vapi-support-btn, [id*="vapi"], [class*="vapi"]:not([class*="buzzwald"])');
+      vapiButtons.forEach(button => {
+        if (button && !button.closest('.buzzwald-widget')) {
+          button.style.display = 'none';
+        }
+      });
+    };
+
+    // Hide immediately
+    hideButtons();
+
+    // Keep checking for new Vapi buttons
+    const observer = new MutationObserver(() => {
+      hideButtons();
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+
+    // Store observer for cleanup
+    this.vapiButtonObserver = observer;
   }
 
   getPhoneIcon() {
@@ -394,15 +431,11 @@ export class BuzzwaldWidget {
   }
 
   initializeVapi() {
-    if (this.config.mockMode) {
-      this.vapi = this.createMockVapiClient();
-    } else {
-      this.vapi = new VapiClient({
-        apiKey: this.config.vapiKey,
-        assistant: this.config.assistant,
-        phoneNumber: this.config.phoneNumber
-      });
-    }
+    this.vapi = new VapiClient({
+      apiKey: this.config.vapiKey,
+      assistant: this.config.assistant,
+      phoneNumber: this.config.phoneNumber
+    });
 
     // Listen to call state changes
     this.vapi.on('call-start', () => this.updateCallState('connecting'));
@@ -416,62 +449,6 @@ export class BuzzwaldWidget {
       this.updateCallState('ended');
       setTimeout(() => this.updateCallState('idle'), 2000);
     });
-  }
-
-  createMockVapiClient() {
-    return {
-      eventListeners: new Map(),
-      
-      async start() {
-        console.log('🎭 Mock: Starting Vapi call');
-        this.emit('call-start');
-        
-        // Simulate call progression
-        setTimeout(() => this.emit('speech-start'), 2000);
-        
-        // Auto-end call after 10 seconds for demo
-        setTimeout(() => {
-          console.log('🎭 Mock: Auto-ending call');
-          this.emit('call-end');
-        }, 10000);
-      },
-
-      stop() {
-        console.log('🎭 Mock: Stopping call');
-        this.emit('call-end');
-      },
-
-      on(event, callback) {
-        if (!this.eventListeners.has(event)) {
-          this.eventListeners.set(event, []);
-        }
-        this.eventListeners.get(event).push(callback);
-      },
-
-      off(event, callback) {
-        if (!this.eventListeners.has(event)) return;
-        const listeners = this.eventListeners.get(event);
-        const index = listeners.indexOf(callback);
-        if (index > -1) {
-          listeners.splice(index, 1);
-        }
-      },
-
-      emit(event, data) {
-        if (!this.eventListeners.has(event)) return;
-        this.eventListeners.get(event).forEach(callback => {
-          try {
-            callback(data);
-          } catch (error) {
-            console.error(`Error in event listener for ${event}:`, error);
-          }
-        });
-      },
-
-      destroy() {
-        this.eventListeners.clear();
-      }
-    };
   }
 
   updateCallState(state) {
@@ -527,6 +504,12 @@ export class BuzzwaldWidget {
       if (this.retryTimeout) {
         clearTimeout(this.retryTimeout);
         this.retryTimeout = null;
+      }
+
+      // Clean up mutation observer
+      if (this.vapiButtonObserver) {
+        this.vapiButtonObserver.disconnect();
+        this.vapiButtonObserver = null;
       }
 
       this.isInitialized = false;

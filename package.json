@@ -25,5 +25,8 @@
   "author": "Structured Labs",
   "devDependencies": {
     "vite": "^7.0.3"
+  },
+  "dependencies": {
+    "@vapi-ai/web": "^2.3.8"
   }
 }
