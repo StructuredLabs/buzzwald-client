@@ -3,8 +3,8 @@ import { VapiClient } from './vapi.js';
 export class BuzzwaldWidget {
   constructor(config = {}) {
     this.config = {
-      vapiKey: '',
-      assistant: '',
+      id: '',
+      token: '',
       phoneNumber: '',
       position: 'bottom-right',
       backgroundColor: '#FFFF00',
@@ -43,20 +43,20 @@ export class BuzzwaldWidget {
   }
 
   validateConfig() {
-    if (!this.config.vapiKey) {
-      throw new Error('Vapi key is required');
+    if (!this.config.token) {
+      throw new Error('Token is required');
     }
 
-    if (!this.config.assistant) {
-      throw new Error('Vapi assistant ID is required');
+    if (!this.config.id) {
+      throw new Error('ID is required');
     }
 
-    if (typeof this.config.vapiKey !== 'string') {
-      throw new Error('Vapi key must be a string');
+    if (typeof this.config.token !== 'string') {
+      throw new Error('Token must be a string');
     }
 
-    if (typeof this.config.assistant !== 'string') {
-      throw new Error('Assistant ID must be a string');
+    if (typeof this.config.id !== 'string') {
+      throw new Error('ID must be a string');
     }
 
     // Validate position
@@ -432,8 +432,8 @@ export class BuzzwaldWidget {
 
   initializeVapi() {
     this.vapi = new VapiClient({
-      apiKey: this.config.vapiKey,
-      assistant: this.config.assistant,
+      id: this.config.id,
+      token: this.config.token,
       phoneNumber: this.config.phoneNumber
     });
 

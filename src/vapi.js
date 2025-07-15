@@ -10,7 +10,7 @@ export class VapiClient {
   }
 
   initVapi() {
-    this.vapi = new Vapi(this.config.apiKey);
+    this.vapi = new Vapi(this.config.token);
     this.setupEventListeners();
   }
 
@@ -69,7 +69,7 @@ export class VapiClient {
 
     try {
       // Start call using Vapi SDK with assistant ID
-      await this.vapi.start(this.config.assistant);
+      await this.vapi.start(this.config.id);
     } catch (error) {
       console.error('Failed to start Vapi call:', error);
       throw error;
