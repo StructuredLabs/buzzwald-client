@@ -17,10 +17,10 @@ import { BuzzwaldWidget } from './widget.js';
       const config = window.BuzzwaldConfig || {};
       
       // Validate required configuration (unless in mock mode)
-      if (!config.mockMode && !config.token) {
-        console.error('Buzzwald: token is required in window.BuzzwaldConfig');
-        return;
-      }
+      // if (!config.mockMode && !config.token) {
+        // console.error('Buzzwald: token is required in window.BuzzwaldConfig');
+        // return;
+      // }
       
       if (!config.mockMode && !config.id) {
         console.error('Buzzwald: id is required in window.BuzzwaldConfig');

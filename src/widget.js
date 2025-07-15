@@ -1,5 +1,9 @@
 import { VapiClient } from './vapi.js';
 
+// Configuration: API endpoint from env variable
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const JWT_ENDPOINT = `${API_BASE_URL}/api/auth/jwt`;
+
 export class BuzzwaldWidget {
   constructor(config = {}) {
     this.config = {
@@ -23,13 +27,14 @@ export class BuzzwaldWidget {
     this.init();
   }
 
-  init() {
+  async init() {
     if (this.isInitialized) {
       console.warn('Buzzwald widget is already initialized');
       return;
     }
 
     try {
+      await this.ensureToken();
       this.validateConfig();
       this.checkBrowserSupport();
       this.injectStyles();
@@ -39,6 +44,41 @@ export class BuzzwaldWidget {
     } catch (error) {
       console.error('Buzzwald: Failed to initialize widget', error);
       this.handleInitializationError(error);
+    }
+  }
+
+  async ensureToken() {
+    if (!this.config.token) {
+      if (!this.config.id) {
+        throw new Error('ID is required to fetch JWT token');
+      }
+      try {
+        this.config.token = await this.fetchJwt(this.config.id);
+      } catch (err) {
+        throw new Error('Failed to fetch authentication token: ' + (err.message || err));
+      }
+    }
+  }
+
+  async fetchJwt(assistant_id) {
+    try {
+      const response = await fetch(JWT_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ assistant_id }),
+        credentials: 'include', // if you need cookies for auth, else remove
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.message || `Failed to fetch JWT: ${response.status}`);
+      }
+      const data = await response.json();
+      return data.token;
+    } catch (err) {
+      console.error('JWT fetch error:', err);
+      throw err;
     }
   }
 
@@ -436,19 +476,72 @@ export class BuzzwaldWidget {
       token: this.config.token,
       phoneNumber: this.config.phoneNumber
     });
+    this.attachVapiListeners();
+  }
 
-    // Listen to call state changes
+  // Attach all Vapi event listeners in one place
+  attachVapiListeners() {
+    // Remove previous listeners if needed (optional, depending on your VapiClient implementation)
+    // If your VapiClient supports an 'off' method, you could remove old listeners here.
+
     this.vapi.on('call-start', () => this.updateCallState('connecting'));
     this.vapi.on('speech-start', () => this.updateCallState('connected'));
     this.vapi.on('call-end', () => {
       this.updateCallState('ended');
       setTimeout(() => this.updateCallState('idle'), 2000);
     });
-    this.vapi.on('error', (error) => {
+    this.vapi.on('error', async (error) => {
       console.error('Buzzwald: Vapi error', error);
+      // Check for JWT expiry error from Vapi
+      if (
+        error &&
+        error.type === 'start-method-error' &&
+        error.error &&
+        typeof error.error.message === 'string' &&
+        error.error.message.includes('JWT has expired')
+      ) {
+        try {
+          console.log('JWT expired, fetching new token');
+          this.config.token = await this.fetchJwt(this.config.id);
+          // Re-instantiate VapiClient with new token
+          if (this.vapi) {
+            this.vapi.destroy();
+          }
+          this.vapi = new VapiClient({
+            id: this.config.id,
+            token: this.config.token,
+            phoneNumber: this.config.phoneNumber
+          });
+          this.attachVapiListeners();
+          // Optionally, you could retry the failed action here
+        } catch (err) {
+          this.showErrorMessage('Session expired. Please refresh.');
+        }
+      }
       this.updateCallState('ended');
       setTimeout(() => this.updateCallState('idle'), 2000);
     });
+    // Handle JWT expiry: listen for auth errors from VapiClient if supported
+    if (typeof this.vapi.on === 'function') {
+      this.vapi.on('authError', async (error) => {
+        if (error && error.code === 'jwt_expired') {
+          try {
+            this.config.token = await this.fetchJwt(this.config.id);
+            if (this.vapi) {
+              this.vapi.destroy();
+            }
+            this.vapi = new VapiClient({
+              id: this.config.id,
+              token: this.config.token,
+              phoneNumber: this.config.phoneNumber
+            });
+            this.attachVapiListeners();
+          } catch (err) {
+            this.showErrorMessage('Session expired. Please refresh.');
+          }
+        }
+      });
+    }
   }
 
   updateCallState(state) {
