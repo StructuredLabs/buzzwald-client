@@ -4,15 +4,20 @@
   "version": "0.0.1",
   "type": "module",
   "description": "Buzzwald phone widget - embeddable voice call widget",
-  "main": "dist/widget.iife.js",
+  "main": "dist/buzzwald-widget.js",
   "files": [
     "dist/"
   ],
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "bun run build:clean && bun run build:widget && bun run build:loader",
+    "build:clean": "rm -rf dist",
+    "build:widget": "vite build",
+    "build:loader": "BUILD_TARGET=loader vite build",
     "preview": "vite preview",
-    "test": "echo 'Widget test page available at test.html'"
+    "test": "echo 'Widget test page available at test.html'",
+    "test:cache-busting": "vite --open test-cache-busting.html",
+    "build:release": "bun run build && echo 'Build complete! Remember to create a GitHub release to deploy.'"
   },
   "keywords": [
     "widget",
