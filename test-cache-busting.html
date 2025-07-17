@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cache Busting Test - Buzzwald Widget</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .test-section {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #007bff;
+        }
+        .test-section h2 {
+            margin-top: 0;
+            color: #555;
+        }
+        .info-box {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            color: #1976d2;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .success {
+            background: #e8f5e8;
+            border-color: #4caf50;
+            color: #2e7d32;
+        }
+        .warning {
+            background: #fff3e0;
+            border-color: #ff9800;
+            color: #f57c00;
+        }
+        .error {
+            background: #ffebee;
+            border-color: #f44336;
+            color: #c62828;
+        }
+        pre {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            border: 1px solid #ddd;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .test-controls {
+            margin: 20px 0;
+        }
+        .version-info {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+        .loader-status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Cache Busting Test - Buzzwald Widget</h1>
+        
+        <div class="info-box">
+            <strong>New Embed Code:</strong> Users will now use this single script tag that never changes:
+            <pre>&lt;script src="https://cdn.jsdelivr.net/gh/StructuredLabs/buzzwald-client@latest/dist/buzzwald.js"&gt;&lt;/script&gt;</pre>
+        </div>
+
+        <div class="test-section">
+            <h2>Loader Status</h2>
+            <div id="loader-status" class="loader-status">Initializing...</div>
+            <div id="version-info" class="version-info">Version info will appear here...</div>
+        </div>
+
+        <div class="test-section">
+            <h2>Cache Busting Test</h2>
+            <div class="test-controls">
+                <button onclick="simulateUpdate()">Simulate Version Update</button>
+                <button onclick="clearCache()">Clear Cache</button>
+                <button onclick="reloadWidget()">Reload Widget</button>
+                <button onclick="checkVersion()">Check Version</button>
+            </div>
+            
+            <div id="test-results"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Browser Cache Information</h2>
+            <div id="cache-info">
+                <p>Checking cache status...</p>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>Network Requests</h2>
+            <div id="network-log">
+                <p>Network requests will be logged here...</p>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>Widget Configuration</h2>
+            <pre id="config-display"></pre>
+        </div>
+
+        <div class="content" style="min-height: 200px;">
+            <h2>Test Content</h2>
+            <p>This page tests the cache-busting functionality. The widget should load with the latest version every time.</p>
+            <p>Look for the phone button in the bottom-right corner.</p>
+        </div>
+    </div>
+
+    <!-- Widget Configuration -->
+    <script>
+        window.BuzzwaldConfig = {
+            id: 'test-assistant-id',
+            token: '',
+            position: 'bottom-right',
+            backgroundColor: '#FFFF00',
+            iconColor: '#000000',
+            onError: function(error) {
+                console.error('Widget error:', error);
+                updateLoaderStatus('Error: ' + error, 'error');
+            }
+        };
+
+        // Display configuration
+        document.getElementById('config-display').textContent = JSON.stringify(window.BuzzwaldConfig, null, 2);
+
+        // Logging functions
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            console.log(logEntry);
+            
+            const networkLog = document.getElementById('network-log');
+            const div = document.createElement('div');
+            div.textContent = logEntry;
+            div.className = type;
+            networkLog.appendChild(div);
+            
+            // Keep only last 20 entries
+            while (networkLog.children.length > 20) {
+                networkLog.removeChild(networkLog.firstChild);
+            }
+        }
+
+        function updateLoaderStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('loader-status');
+            statusDiv.textContent = message;
+            statusDiv.className = 'loader-status ' + type;
+        }
+
+        function updateVersionInfo(info) {
+            const versionDiv = document.getElementById('version-info');
+            versionDiv.textContent = JSON.stringify(info, null, 2);
+        }
+
+        // Test functions
+        function simulateUpdate() {
+            // Simulate a version update by clearing cache and forcing reload
+            clearCache();
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        }
+
+        function clearCache() {
+            // Clear localStorage cache
+            localStorage.removeItem('buzzwald_widget_version');
+            localStorage.removeItem('buzzwald_widget_script');
+            log('Cache cleared', 'success');
+            updateLoaderStatus('Cache cleared - ready for reload', 'success');
+        }
+
+        function reloadWidget() {
+            // Destroy existing widget if present
+            if (window.buzzwaldDestroy) {
+                window.buzzwaldDestroy();
+            }
+            
+            // Remove existing loader script
+            const existingScript = document.querySelector('script[data-buzzwald-widget]');
+            if (existingScript) {
+                existingScript.remove();
+            }
+            
+            // Force reload
+            location.reload();
+        }
+
+        async function checkVersion() {
+            try {
+                const response = await fetch('https://cdn.jsdelivr.net/gh/StructuredLabs/buzzwald-client@latest/dist/version.json?t=' + Date.now());
+                const version = await response.json();
+                updateVersionInfo(version);
+                log('Version check successful', 'success');
+            } catch (error) {
+                log('Version check failed: ' + error.message, 'error');
+            }
+        }
+
+        // Monitor cache status
+        function updateCacheInfo() {
+            const cacheInfo = document.getElementById('cache-info');
+            const versionCache = localStorage.getItem('buzzwald_widget_version');
+            const scriptCache = localStorage.getItem('buzzwald_widget_script');
+            
+            let html = '<h3>LocalStorage Cache:</h3>';
+            html += '<p><strong>Version Cache:</strong> ' + (versionCache ? 'Present' : 'Empty') + '</p>';
+            html += '<p><strong>Script Cache:</strong> ' + (scriptCache ? 'Present' : 'Empty') + '</p>';
+            
+            if (versionCache) {
+                try {
+                    const parsed = JSON.parse(versionCache);
+                    const age = Date.now() - parsed.timestamp;
+                    html += `<p><strong>Version Cache Age:</strong> ${Math.round(age / 1000)}s</p>`;
+                } catch (e) {
+                    html += '<p><strong>Version Cache:</strong> Invalid</p>';
+                }
+            }
+            
+            cacheInfo.innerHTML = html;
+        }
+
+        // Update cache info every 5 seconds
+        setInterval(updateCacheInfo, 5000);
+        updateCacheInfo();
+
+        // Monitor widget loading
+        updateLoaderStatus('Waiting for loader script...', 'warning');
+        
+        // Check if loader is working
+        setTimeout(() => {
+            if (window.BuzzwaldLoader) {
+                updateLoaderStatus('Loader script loaded successfully', 'success');
+            } else {
+                updateLoaderStatus('Loader script not found - check console', 'error');
+            }
+        }, 2000);
+
+        // Check if widget loaded
+        setTimeout(() => {
+            if (window.buzzwaldWidget) {
+                updateLoaderStatus('Widget loaded successfully', 'success');
+            } else {
+                updateLoaderStatus('Widget not loaded - check console', 'error');
+            }
+        }, 5000);
+    </script>
+
+    <!-- Load the cache-busting loader (in production, users would load from CDN) -->
+    <script src="/dist/buzzwald.js"></script>
+</body>
+</html>
