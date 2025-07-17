@@ -15,8 +15,8 @@
     "build:widget": "vite build",
     "build:loader": "BUILD_TARGET=loader vite build",
     "preview": "vite preview",
-    "test": "echo 'Widget test page available at test.html'",
-    "test:cache-busting": "vite --open test-cache-busting.html",
+    "test": "echo 'Widget test page available at test/test.html'",
+    "test:cache-busting": "vite --open test/test-cache-busting.html",
     "build:release": "bun run build && echo 'Build complete! Remember to create a GitHub release to deploy.'"
   },
   "keywords": [

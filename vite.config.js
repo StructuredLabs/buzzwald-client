@@ -67,7 +67,7 @@ export default defineConfig(({ mode }) => {
       emptyOutDir: false // Don't clear dist when building loader
     },
     server: {
-      open: '/test.html'
+      open: '/test/test.html'
     },
     plugins: [generateVersionPlugin()]
   };
