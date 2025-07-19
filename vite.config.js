@@ -9,22 +9,8 @@ function generateVersionPlugin() {
     name: 'generate-version',
     closeBundle() {
       // Generate version information
-      const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-      let commit = null;
-      
-      try {
-        commit = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
-      } catch (error) {
-        console.warn('Could not get git commit hash');
-      }
-      
       const versionInfo = {
-        version: packageJson.version,
-        commit,
-        timestamp: Date.now(),
-        buildDate: new Date().toISOString(),
-        buildId: `${packageJson.version}-${commit || 'unknown'}-${Date.now()}`,
-        cacheBuster: `v=${packageJson.version}&t=${Date.now()}`
+        timestamp: Date.now()
       };
       
       // Write version.json to dist
