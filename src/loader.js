@@ -74,10 +74,10 @@
       fetch(url, { 
         signal: controller.signal,
         cache: 'no-cache',
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache'
-        }
+        // headers: {
+          // 'Cache-Control': 'no-cache, no-store, must-revalidate',
+          // 'Pragma': 'no-cache'
+        // }
       })
       .then(response => {
         clearTimeout(timeoutId);
@@ -162,9 +162,9 @@
       const versionData = await getLatestVersion();
       
       let scriptUrl;
-      if (versionData && versionData.version && versionData.timestamp) {
-        // Use versioned URL with timestamp for cache busting
-        scriptUrl = `${CDN_BASE}@latest/dist/buzzwald-widget.js?v=${versionData.version}&t=${versionData.timestamp}`;
+      if (versionData && versionData.timestamp) {
+        // Use timestamp for cache busting
+        scriptUrl = `${CDN_BASE}@latest/dist/buzzwald-widget.js?t=${versionData.timestamp}`;
       } else {
         // Fallback to simple cache busting with current timestamp
         scriptUrl = `${FALLBACK_SCRIPT_URL}?t=${Date.now()}`;
