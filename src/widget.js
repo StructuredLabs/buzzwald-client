@@ -6,6 +6,7 @@ const JWT_ENDPOINT = `${API_BASE_URL}/api/auth/jwt`;
 
 export class BuzzwaldWidget {
   constructor(config = {}) {
+    console.log('🐝 Buzzwald Widget v1.1 - Usage Limit Support');
     this.config = {
       id: '',
       token: '',
@@ -61,6 +62,7 @@ export class BuzzwaldWidget {
   }
 
   async fetchJwt(assistant_id) {
+    console.log('🔑 Fetching JWT for assistant:', assistant_id, 'from:', JWT_ENDPOINT);
     try {
       const response = await fetch(JWT_ENDPOINT, {
         method: 'POST',
@@ -70,11 +72,23 @@ export class BuzzwaldWidget {
         body: JSON.stringify({ assistant_id }),
         credentials: 'include', // if you need cookies for auth, else remove
       });
+      console.log('📡 JWT Response status:', response.ok, response.status);
+      
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
         throw new Error(error.message || `Failed to fetch JWT: ${response.status}`);
       }
       const data = await response.json();
+      console.log('📄 JWT Response data:', data);
+      
+      // Check if response contains an error (usage limit exceeded)
+      if (data.error) {
+        console.log('🛑 Usage limit error detected:', data.error);
+        const usageError = new Error(data.error);
+        usageError.isUsageLimit = true;
+        throw usageError;
+      }
+      
       return data.token;
     } catch (err) {
       console.error('JWT fetch error:', err);
@@ -140,6 +154,55 @@ export class BuzzwaldWidget {
   }
 
   handleInitializationError(error) {
+    console.log('🚨 Initialization error:', error.message, 'isUsageLimit:', error.isUsageLimit);
+    // Check if this is a usage limit error
+    if (error.isUsageLimit || (error.message && error.message.includes('Usage limit exceeded'))) {
+      console.log('📞 Creating usage limit widget');
+      this.createUsageLimitWidget(error);
+    } else {
+      console.log('⚠️ Creating generic error widget');
+      this.createGenericErrorWidget(error);
+    }
+  }
+
+  createUsageLimitWidget(error) {
+    try {
+      console.log('Creating usage limit widget...');
+      
+      // Inject styles first
+      this.injectStyles();
+      
+      // Create disabled widget that looks like the normal widget but is non-functional
+      this.widgetElement = document.createElement('div');
+      this.widgetElement.className = `buzzwald-widget ${this.config.position}`;
+      
+      this.buttonElement = document.createElement('button');
+      this.buttonElement.className = 'buzzwald-button buzzwald-button-disabled';
+      this.buttonElement.setAttribute('aria-label', 'Voice calls unavailable - limit reached');
+      this.buttonElement.innerHTML = this.getPhoneIcon();
+      this.buttonElement.disabled = true;
+      
+      // Add click handler to show usage limit message
+      this.buttonElement.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.showUsageLimitMessage();
+      });
+      
+      this.widgetElement.appendChild(this.buttonElement);
+      document.body.appendChild(this.widgetElement);
+      
+      console.log('Usage limit widget created and added to DOM');
+      
+      // Show initial usage limit message
+      setTimeout(() => this.showUsageLimitMessage(), 500);
+    } catch (err) {
+      console.error('Error creating usage limit widget:', err);
+      // Fallback to generic error widget if usage limit widget fails
+      this.createGenericErrorWidget(error);
+    }
+  }
+
+  createGenericErrorWidget(error) {
     // Create a simple error widget
     const errorWidget = document.createElement('div');
     errorWidget.className = 'buzzwald-widget-error';
@@ -172,6 +235,68 @@ export class BuzzwaldWidget {
     
     // Store reference for cleanup
     this.errorWidget = errorWidget;
+  }
+
+  showUsageLimitMessage() {
+    // Create usage limit message overlay
+    const messageOverlay = document.createElement('div');
+    messageOverlay.className = 'buzzwald-usage-limit-message';
+    
+    // Position the message based on widget position
+    let positionStyles = '';
+    switch (this.config.position) {
+      case 'bottom-right':
+        positionStyles = 'bottom: 90px; right: 20px;';
+        break;
+      case 'bottom-left':
+        positionStyles = 'bottom: 90px; left: 20px;';
+        break;
+      case 'top-right':
+        positionStyles = 'top: 90px; right: 20px;';
+        break;
+      case 'top-left':
+        positionStyles = 'top: 90px; left: 20px;';
+        break;
+      default:
+        positionStyles = 'bottom: 90px; right: 20px;';
+    }
+    
+    messageOverlay.style.cssText = `
+      position: fixed;
+      ${positionStyles}
+      background: #ff6b35;
+      color: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+      z-index: 2147483647;
+      max-width: 250px;
+      word-wrap: break-word;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      cursor: pointer;
+    `;
+    messageOverlay.innerHTML = `
+      <div style="font-weight: bold; margin-bottom: 4px;">Voice Call Limit Reached</div>
+      <div>Please upgrade your plan to continue using voice calls.</div>
+      <div style="font-size: 12px; margin-top: 8px; opacity: 0.9;">Click to dismiss</div>
+    `;
+    
+    // Add click to dismiss
+    messageOverlay.addEventListener('click', () => {
+      if (messageOverlay.parentNode) {
+        messageOverlay.parentNode.removeChild(messageOverlay);
+      }
+    });
+    
+    document.body.appendChild(messageOverlay);
+    
+    // Auto-remove after 8 seconds
+    setTimeout(() => {
+      if (messageOverlay.parentNode) {
+        messageOverlay.parentNode.removeChild(messageOverlay);
+      }
+    }, 8000);
   }
 
   injectStyles() {
@@ -259,6 +384,25 @@ export class BuzzwaldWidget {
       .buzzwald-button.ended {
         background-color: #FF0000;
         color: #FFFFFF;
+      }
+
+      .buzzwald-button-disabled {
+        background-color: #cccccc !important;
+        color: #666666 !important;
+        cursor: not-allowed !important;
+        opacity: 0.8 !important;
+        display: flex !important;
+        visibility: visible !important;
+      }
+
+      .buzzwald-button-disabled:hover {
+        transform: none !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        background-color: #cccccc !important;
+      }
+
+      .buzzwald-button-disabled:active {
+        transform: none !important;
       }
 
       @keyframes buzzwald-pulse {
@@ -423,7 +567,9 @@ export class BuzzwaldWidget {
   getUserFriendlyError(error) {
     const message = error.message || error.toString();
     
-    if (message.includes('permission') || message.includes('denied')) {
+    if (error.isUsageLimit || message.includes('Usage limit exceeded')) {
+      return 'Voice call limit reached. Please upgrade your plan to continue.';
+    } else if (message.includes('permission') || message.includes('denied')) {
       return 'Please allow microphone access';
     } else if (message.includes('network') || message.includes('connection')) {
       return 'Network error, retrying...';
@@ -515,7 +661,11 @@ export class BuzzwaldWidget {
           this.attachVapiListeners();
           // Optionally, you could retry the failed action here
         } catch (err) {
-          this.showErrorMessage('Session expired. Please refresh.');
+          if (err.isUsageLimit) {
+            this.showErrorMessage('Voice call limit reached. Please upgrade your plan.');
+          } else {
+            this.showErrorMessage('Session expired. Please refresh.');
+          }
         }
       }
       this.updateCallState('ended');
@@ -537,7 +687,11 @@ export class BuzzwaldWidget {
             });
             this.attachVapiListeners();
           } catch (err) {
-            this.showErrorMessage('Session expired. Please refresh.');
+            if (err.isUsageLimit) {
+              this.showErrorMessage('Voice call limit reached. Please upgrade your plan.');
+            } else {
+              this.showErrorMessage('Session expired. Please refresh.');
+            }
           }
         }
       });

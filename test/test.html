@@ -93,6 +93,7 @@
             <button onclick="testWidget()">Test Widget</button>
             <button onclick="destroyWidget()">Destroy Widget</button>
             <button onclick="reinitializeWidget()">Reinitialize Widget</button>
+            <button onclick="testUsageLimit()">Test Usage Limit Error</button>
         </div>
 
         <div class="content">
@@ -174,6 +175,53 @@
             } else {
                 console.log('Widget destroy function not available');
                 alert('Widget destroy function not available');
+            }
+        }
+
+        function testUsageLimit() {
+            // Mock the fetch to simulate usage limit error
+            const originalFetch = window.fetch;
+            window.fetch = function(url, options) {
+                console.log('🔍 Mock fetch called for:', url);
+                if (url.includes('/api/auth/jwt')) {
+                    console.log('💥 Returning usage limit error');
+                    return Promise.resolve({
+                        ok: true,
+                        json: () => Promise.resolve({
+                            error: "Usage limit exceeded"
+                        })
+                    });
+                }
+                return originalFetch.apply(this, arguments);
+            };
+
+            // Destroy existing widget and create new one to trigger the error
+            if (window.buzzwaldDestroy) {
+                window.buzzwaldDestroy();
+                setTimeout(() => {
+                    // Set test config with ID but NO TOKEN to force JWT fetch
+                    window.BuzzwaldConfig = {
+                        id: 'test-assistant-id',
+                        token: '', // Clear token to force fetch
+                        position: 'bottom-right',
+                        backgroundColor: '#FFFF00',
+                        iconColor: '#000000',
+                    };
+                    
+                    // Import the widget class directly to create a new instance
+                    import('/src/widget.js').then(module => {
+                        console.log('🧪 Creating test widget with usage limit...');
+                        new module.BuzzwaldWidget(window.BuzzwaldConfig);
+                    });
+                    
+                    console.log('Testing usage limit error...');
+                    
+                    // Restore original fetch after 5 seconds
+                    setTimeout(() => {
+                        window.fetch = originalFetch;
+                        console.log('Fetch restored to original');
+                    }, 5000);
+                }, 100);
             }
         }
 
