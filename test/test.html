@@ -94,6 +94,9 @@
             <button onclick="destroyWidget()">Destroy Widget</button>
             <button onclick="reinitializeWidget()">Reinitialize Widget</button>
             <button onclick="testUsageLimit()">Test Usage Limit Error</button>
+            <button onclick="testUpgrade()">Simulate User Upgrade</button>
+            <button onclick="testRefreshAfterUpgrade()">Test Refresh After Upgrade</button>
+            <button onclick="manualRetryCheck()">Manual Retry Check (Debug)</button>
         </div>
 
         <div class="content">
@@ -129,7 +132,7 @@
     <script>
         // Configuration for the widget
         window.BuzzwaldConfig = {
-            id: '',
+            id: '1792d475-9f91-4886-a59b-801848adf489',
             position: 'bottom-right',
             backgroundColor: '#FFFF00',
             iconColor: '#000000',
@@ -181,14 +184,16 @@
         function testUsageLimit() {
             // Mock the fetch to simulate usage limit error
             const originalFetch = window.fetch;
+            window.originalFetch = originalFetch; // Save for other tests
             window.fetch = function(url, options) {
                 console.log('🔍 Mock fetch called for:', url);
                 if (url.includes('/api/auth/jwt')) {
-                    console.log('💥 Returning usage limit error');
+                    console.log('💥 Returning 402 usage limit error');
                     return Promise.resolve({
-                        ok: true,
+                        ok: false,
+                        status: 402,
                         json: () => Promise.resolve({
-                            error: "Usage limit exceeded"
+                            error: "You've used all 5 included minutes. Upgrade to Pro to continue."
                         })
                     });
                 }
@@ -211,7 +216,8 @@
                     // Import the widget class directly to create a new instance
                     import('/src/widget.js').then(module => {
                         console.log('🧪 Creating test widget with usage limit...');
-                        new module.BuzzwaldWidget(window.BuzzwaldConfig);
+                        window.buzzwaldWidget = new module.BuzzwaldWidget(window.BuzzwaldConfig);
+                        console.log('🔗 Widget stored in window.buzzwaldWidget for debugging');
                     });
                     
                     console.log('Testing usage limit error...');
@@ -222,6 +228,86 @@
                         console.log('Fetch restored to original');
                     }, 5000);
                 }, 100);
+            }
+        }
+
+        function testUpgrade() {
+            // This simulates the user upgrading their plan
+            // We need to mock successful responses for the test assistant ID
+            const originalFetch = window.originalFetch || window.fetch;
+            
+            window.fetch = function(url, options) {
+                console.log('🔍 Post-upgrade mock fetch called for:', url);
+                if (url.includes('/api/auth/jwt')) {
+                    console.log('✅ Returning successful JWT for upgraded user');
+                    return Promise.resolve({
+                        ok: true,
+                        status: 200,
+                        json: () => Promise.resolve({
+                            token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock-upgraded-user-token.signature"
+                        })
+                    });
+                }
+                return originalFetch.apply(this, arguments);
+            };
+            
+            console.log('💳 Simulating user upgrade - successful JWT responses enabled');
+            alert('Simulated user upgrade! The widget should automatically recover in ~5 seconds.');
+        }
+
+        function testRefreshAfterUpgrade() {
+            // This simulates a page refresh after upgrade
+            console.log('🔄 Simulating page refresh after upgrade');
+            
+            // Restore normal fetch
+            window.fetch = window.originalFetch || window.fetch;
+            
+            // Destroy and recreate widget (simulates page refresh)
+            if (window.buzzwaldDestroy) {
+                window.buzzwaldDestroy();
+                setTimeout(() => {
+                    // Restore original config
+                    window.BuzzwaldConfig = {
+                        id: '1792d475-9f91-4886-a59b-801848adf489',
+                        position: 'bottom-right',
+                        backgroundColor: '#FFFF00',
+                        iconColor: '#000000',
+                    };
+                    
+                    import('/src/widget.js').then(module => {
+                        console.log('🔄 Creating new widget after refresh...');
+                        new module.BuzzwaldWidget(window.BuzzwaldConfig);
+                        alert('Widget refreshed! Should now be functional again.');
+                    });
+                }, 100);
+            }
+        }
+
+        function manualRetryCheck() {
+            // Manually trigger a retry check for debugging
+            console.log('🔧 Manual retry check triggered');
+            
+            if (window.buzzwaldWidget && window.buzzwaldWidget.usageLimitRetryTimer) {
+                console.log('⏰ Auto-recovery timer is running');
+                // Trigger an immediate retry by simulating the interval
+                if (window.buzzwaldWidget.fetchJwt) {
+                    console.log('📡 Manually calling fetchJwt...');
+                    window.buzzwaldWidget.fetchJwt(window.buzzwaldWidget.config.id)
+                        .then(token => {
+                            console.log('✅ Manual retry successful!', token);
+                            window.buzzwaldWidget.config.token = token;
+                            window.buzzwaldWidget.restoreWidget();
+                        })
+                        .catch(err => {
+                            console.log('❌ Manual retry failed:', err.message);
+                        });
+                }
+            } else {
+                console.log('❌ No auto-recovery timer found or widget not available');
+                console.log('Widget:', !!window.buzzwaldWidget);
+                if (window.buzzwaldWidget) {
+                    console.log('Timer:', !!window.buzzwaldWidget.usageLimitRetryTimer);
+                }
             }
         }
 

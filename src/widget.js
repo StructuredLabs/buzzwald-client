@@ -6,7 +6,6 @@ const JWT_ENDPOINT = `${API_BASE_URL}/api/auth/jwt`;
 
 export class BuzzwaldWidget {
   constructor(config = {}) {
-    console.log('🐝 Buzzwald Widget v1.1 - Usage Limit Support');
     this.config = {
       id: '',
       token: '',
@@ -24,6 +23,9 @@ export class BuzzwaldWidget {
     this.currentCallState = 'idle';
     this.retryCount = 0;
     this.maxRetries = 3;
+    this.usageLimitRetryTimer = null;
+    this.usageLimitRetryAttempts = 0;
+    this.maxUsageLimitRetries = 10;
 
     this.init();
   }
@@ -56,13 +58,17 @@ export class BuzzwaldWidget {
       try {
         this.config.token = await this.fetchJwt(this.config.id);
       } catch (err) {
-        throw new Error('Failed to fetch authentication token: ' + (err.message || err));
+        // Preserve usage limit error properties when re-throwing
+        if (err.isUsageLimit) {
+          throw err; // Pass through usage limit errors without wrapping
+        } else {
+          throw new Error('Failed to fetch authentication token: ' + (err.message || err));
+        }
       }
     }
   }
 
   async fetchJwt(assistant_id) {
-    console.log('🔑 Fetching JWT for assistant:', assistant_id, 'from:', JWT_ENDPOINT);
     try {
       const response = await fetch(JWT_ENDPOINT, {
         method: 'POST',
@@ -72,23 +78,23 @@ export class BuzzwaldWidget {
         body: JSON.stringify({ assistant_id }),
         credentials: 'include', // if you need cookies for auth, else remove
       });
-      console.log('📡 JWT Response status:', response.ok, response.status);
       
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.message || `Failed to fetch JWT: ${response.status}`);
-      }
-      const data = await response.json();
-      console.log('📄 JWT Response data:', data);
+      // Handle both success and error responses
+      const data = await response.json().catch(() => ({}));
       
-      // Check if response contains an error (usage limit exceeded)
-      if (data.error) {
-        console.log('🛑 Usage limit error detected:', data.error);
-        const usageError = new Error(data.error);
+      // Check for usage limit error (402 Payment Required or error field)
+      if (response.status === 402 || data.error) {
+        const usageError = new Error(data.error || `Usage limit exceeded (${response.status})`);
         usageError.isUsageLimit = true;
         throw usageError;
       }
       
+      // Handle other non-OK responses
+      if (!response.ok) {
+        throw new Error(data.message || `Failed to fetch JWT: ${response.status}`);
+      }
+      
+      // Success case
       return data.token;
     } catch (err) {
       console.error('JWT fetch error:', err);
@@ -154,21 +160,16 @@ export class BuzzwaldWidget {
   }
 
   handleInitializationError(error) {
-    console.log('🚨 Initialization error:', error.message, 'isUsageLimit:', error.isUsageLimit);
     // Check if this is a usage limit error
     if (error.isUsageLimit || (error.message && error.message.includes('Usage limit exceeded'))) {
-      console.log('📞 Creating usage limit widget');
       this.createUsageLimitWidget(error);
     } else {
-      console.log('⚠️ Creating generic error widget');
       this.createGenericErrorWidget(error);
     }
   }
 
   createUsageLimitWidget(error) {
     try {
-      console.log('Creating usage limit widget...');
-      
       // Inject styles first
       this.injectStyles();
       
@@ -185,21 +186,140 @@ export class BuzzwaldWidget {
       // Add click handler to show usage limit message
       this.buttonElement.addEventListener('click', (e) => {
         e.preventDefault();
-        this.showUsageLimitMessage();
+        this.showUsageLimitMessage(error);
       });
       
       this.widgetElement.appendChild(this.buttonElement);
       document.body.appendChild(this.widgetElement);
       
-      console.log('Usage limit widget created and added to DOM');
-      
       // Show initial usage limit message
-      setTimeout(() => this.showUsageLimitMessage(), 500);
+      setTimeout(() => this.showUsageLimitMessage(error), 500);
+    
+      // Start auto-recovery mechanism
+      this.startUsageLimitRetry();
     } catch (err) {
       console.error('Error creating usage limit widget:', err);
       // Fallback to generic error widget if usage limit widget fails
       this.createGenericErrorWidget(error);
     }
+  }
+
+  startUsageLimitRetry() {
+    // Clear any existing retry timer
+    if (this.usageLimitRetryTimer) {
+      clearInterval(this.usageLimitRetryTimer);
+    }
+    
+    this.usageLimitRetryTimer = setInterval(async () => {
+      this.usageLimitRetryAttempts++;
+      
+      try {
+        // Try to fetch a new JWT token
+        const newToken = await this.fetchJwt(this.config.id);
+        
+        // Stop retrying
+        clearInterval(this.usageLimitRetryTimer);
+        this.usageLimitRetryTimer = null;
+        
+        // Update config with new token
+        this.config.token = newToken;
+        
+        // Restore the widget to functional state
+        this.restoreWidget();
+        
+      } catch (err) {
+        if (err.isUsageLimit) {
+          // Stop retrying if max attempts reached
+          if (this.usageLimitRetryAttempts >= this.maxUsageLimitRetries) {
+            clearInterval(this.usageLimitRetryTimer);
+            this.usageLimitRetryTimer = null;
+          }
+        } else {
+          console.error('Auto-recovery failed with different error:', err);
+          clearInterval(this.usageLimitRetryTimer);
+          this.usageLimitRetryTimer = null;
+        }
+      }
+    }, 30000); // Check every 30 seconds
+  }
+
+  restoreWidget() {
+    try {
+      // Remove existing disabled widget
+      if (this.widgetElement) {
+        this.widgetElement.remove();
+        this.widgetElement = null;
+      }
+      
+      // Complete the normal initialization process
+      this.validateConfig();
+      this.checkBrowserSupport();
+      this.injectStyles();
+      this.createWidget();
+      this.initializeVapi();
+      this.isInitialized = true;
+      
+      // Show success message
+      this.showRestoreSuccessMessage();
+    } catch (err) {
+      console.error('Failed to restore widget:', err);
+      // Fall back to generic error widget if restore fails
+      this.createGenericErrorWidget(err);
+    }
+  }
+
+  showRestoreSuccessMessage() {
+    // Create success message overlay  
+    const messageOverlay = document.createElement('div');
+    messageOverlay.className = 'buzzwald-restore-success-message';
+    
+    // Position the message based on widget position
+    let positionStyles = '';
+    switch (this.config.position) {
+      case 'bottom-right':
+        positionStyles = 'bottom: 90px; right: 20px;';
+        break;
+      case 'bottom-left':
+        positionStyles = 'bottom: 90px; left: 20px;';
+        break;
+      case 'top-right':
+        positionStyles = 'top: 90px; right: 20px;';
+        break;
+      case 'top-left':
+        positionStyles = 'top: 90px; left: 20px;';
+        break;
+      default:
+        positionStyles = 'bottom: 90px; right: 20px;';
+    }
+    
+    messageOverlay.style.cssText = `
+      position: fixed;
+      ${positionStyles}
+      background: #28a745;
+      color: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+      z-index: 2147483647;
+      max-width: 250px;
+      word-wrap: break-word;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    `;
+    
+    messageOverlay.innerHTML = `
+      <div style="font-weight: bold; margin-bottom: 4px;">🎉 Voice Calls Restored!</div>
+      <div>You can now use voice calls again.</div>
+    `;
+    
+    document.body.appendChild(messageOverlay);
+    
+    // Auto-remove after 4 seconds
+    setTimeout(() => {
+      if (messageOverlay.parentNode) {
+        messageOverlay.parentNode.removeChild(messageOverlay);
+      }
+    }, 4000);
   }
 
   createGenericErrorWidget(error) {
@@ -237,7 +357,7 @@ export class BuzzwaldWidget {
     this.errorWidget = errorWidget;
   }
 
-  showUsageLimitMessage() {
+  showUsageLimitMessage(error) {
     // Create usage limit message overlay
     const messageOverlay = document.createElement('div');
     messageOverlay.className = 'buzzwald-usage-limit-message';
@@ -276,9 +396,12 @@ export class BuzzwaldWidget {
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       cursor: pointer;
     `;
+    // Use the server's specific error message, or fallback to generic
+    const errorMessage = error?.message || 'Please upgrade your plan to continue using voice calls.';
+    
     messageOverlay.innerHTML = `
       <div style="font-weight: bold; margin-bottom: 4px;">Voice Call Limit Reached</div>
-      <div>Please upgrade your plan to continue using voice calls.</div>
+      <div>${errorMessage}</div>
       <div style="font-size: 12px; margin-top: 8px; opacity: 0.9;">Click to dismiss</div>
     `;
     
@@ -568,7 +691,8 @@ export class BuzzwaldWidget {
     const message = error.message || error.toString();
     
     if (error.isUsageLimit || message.includes('Usage limit exceeded')) {
-      return 'Voice call limit reached. Please upgrade your plan to continue.';
+      // Use the server's specific message for usage limits
+      return message;
     } else if (message.includes('permission') || message.includes('denied')) {
       return 'Please allow microphone access';
     } else if (message.includes('network') || message.includes('connection')) {
@@ -751,6 +875,12 @@ export class BuzzwaldWidget {
       if (this.retryTimeout) {
         clearTimeout(this.retryTimeout);
         this.retryTimeout = null;
+      }
+
+      // Clear usage limit retry timer
+      if (this.usageLimitRetryTimer) {
+        clearInterval(this.usageLimitRetryTimer);
+        this.usageLimitRetryTimer = null;
       }
 
       // Clean up mutation observer
