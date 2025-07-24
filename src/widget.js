@@ -13,6 +13,8 @@ export class BuzzwaldWidget {
       position: 'bottom-right',
       backgroundColor: '#FFFF00',
       iconColor: '#000000',
+      size: 'medium', // New: size option (small, medium, large, custom)
+      customSize: null, // New: custom size in pixels for when size is 'custom'
       ...config
     };
 
@@ -119,11 +121,27 @@ export class BuzzwaldWidget {
       throw new Error('ID must be a string');
     }
 
-    // Validate position
-    const validPositions = ['bottom-right', 'bottom-left', 'top-right', 'top-left'];
+    // Validate position - now includes center
+    const validPositions = ['bottom-right', 'bottom-left', 'top-right', 'top-left', 'center'];
     if (!validPositions.includes(this.config.position)) {
       console.warn(`Buzzwald: Invalid position "${this.config.position}". Using default "bottom-right"`);
       this.config.position = 'bottom-right';
+    }
+
+    // Validate size
+    const validSizes = ['small', 'medium', 'large', 'custom'];
+    if (!validSizes.includes(this.config.size)) {
+      console.warn(`Buzzwald: Invalid size "${this.config.size}". Using default "medium"`);
+      this.config.size = 'medium';
+    }
+
+    // Validate custom size if size is 'custom'
+    if (this.config.size === 'custom') {
+      if (!this.config.customSize || typeof this.config.customSize !== 'number' || this.config.customSize < 40 || this.config.customSize > 120) {
+        console.warn(`Buzzwald: Invalid custom size "${this.config.customSize}". Using default "medium"`);
+        this.config.size = 'medium';
+        this.config.customSize = null;
+      }
     }
 
     // Validate colors
@@ -142,6 +160,36 @@ export class BuzzwaldWidget {
     const div = document.createElement('div');
     div.style.color = color;
     return div.style.color !== '';
+  }
+
+  getButtonDimensions() {
+    let buttonSize, fontSize, iconSize;
+    
+    switch (this.config.size) {
+      case 'small':
+        buttonSize = 50;
+        fontSize = 20;
+        iconSize = 20;
+        break;
+      case 'large':
+        buttonSize = 80;
+        fontSize = 32;
+        iconSize = 32;
+        break;
+      case 'custom':
+        buttonSize = this.config.customSize;
+        fontSize = Math.round(this.config.customSize * 0.4); // 40% of button size
+        iconSize = Math.round(this.config.customSize * 0.4);
+        break;
+      case 'medium':
+      default:
+        buttonSize = 60;
+        fontSize = 24;
+        iconSize = 24;
+        break;
+    }
+    
+    return { buttonSize, fontSize, iconSize };
   }
 
   checkBrowserSupport() {
@@ -288,6 +336,9 @@ export class BuzzwaldWidget {
       case 'top-left':
         positionStyles = 'top: 90px; left: 20px;';
         break;
+      case 'center':
+        positionStyles = 'top: calc(50% + 60px); left: 50%; transform: translateX(-50%);';
+        break;
       default:
         positionStyles = 'bottom: 90px; right: 20px;';
     }
@@ -377,6 +428,9 @@ export class BuzzwaldWidget {
       case 'top-left':
         positionStyles = 'top: 90px; left: 20px;';
         break;
+      case 'center':
+        positionStyles = 'top: calc(50% + 60px); left: 50%; transform: translateX(-50%);';
+        break;
       default:
         positionStyles = 'bottom: 90px; right: 20px;';
     }
@@ -426,6 +480,8 @@ export class BuzzwaldWidget {
     const styleId = 'buzzwald-widget-styles';
     if (document.getElementById(styleId)) return;
 
+    const { buttonSize, fontSize, iconSize } = this.getButtonDimensions();
+
     const style = document.createElement('style');
     style.id = styleId;
     style.textContent = `
@@ -444,8 +500,8 @@ export class BuzzwaldWidget {
       }
 
       .buzzwald-button {
-        width: 60px;
-        height: 60px;
+        width: ${buttonSize}px;
+        height: ${buttonSize}px;
         border-radius: 50%;
         border: none;
         background-color: ${this.config.backgroundColor};
@@ -457,7 +513,7 @@ export class BuzzwaldWidget {
         transition: transform 0.2s ease, box-shadow 0.2s ease;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         outline: none;
-        font-size: 24px;
+        font-size: ${fontSize}px;
         line-height: 1;
       }
 
@@ -493,6 +549,12 @@ export class BuzzwaldWidget {
       .buzzwald-widget.top-left {
         top: 20px;
         left: 20px;
+      }
+
+      .buzzwald-widget.center {
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
       }
 
       .buzzwald-button.connecting {
@@ -544,8 +606,8 @@ export class BuzzwaldWidget {
       }
 
       .buzzwald-phone-icon {
-        width: 24px;
-        height: 24px;
+        width: ${iconSize}px;
+        height: ${iconSize}px;
         fill: currentColor;
       }
 
@@ -569,6 +631,12 @@ export class BuzzwaldWidget {
         
         .buzzwald-widget.top-left {
           left: 15px;
+        }
+
+        .buzzwald-widget.center {
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
         }
       }
 
@@ -715,10 +783,32 @@ export class BuzzwaldWidget {
   showErrorMessage(message) {
     // Create temporary error message
     const errorMsg = document.createElement('div');
+    
+    // Position the message based on widget position
+    let positionStyles = '';
+    switch (this.config.position) {
+      case 'bottom-right':
+        positionStyles = 'bottom: 90px; right: 20px;';
+        break;
+      case 'bottom-left':
+        positionStyles = 'bottom: 90px; left: 20px;';
+        break;
+      case 'top-right':
+        positionStyles = 'top: 90px; right: 20px;';
+        break;
+      case 'top-left':
+        positionStyles = 'top: 90px; left: 20px;';
+        break;
+      case 'center':
+        positionStyles = 'top: calc(50% + 60px); left: 50%; transform: translateX(-50%);';
+        break;
+      default:
+        positionStyles = 'bottom: 90px; right: 20px;';
+    }
+    
     errorMsg.style.cssText = `
       position: fixed;
-      bottom: 90px;
-      right: 20px;
+      ${positionStyles}
       background: #ff4444;
       color: white;
       padding: 8px 12px;

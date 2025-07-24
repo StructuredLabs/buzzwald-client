@@ -97,6 +97,13 @@
             <button onclick="testUpgrade()">Simulate User Upgrade</button>
             <button onclick="testRefreshAfterUpgrade()">Test Refresh After Upgrade</button>
             <button onclick="manualRetryCheck()">Manual Retry Check (Debug)</button>
+            <hr>
+            <h3>New Features Testing</h3>
+            <button onclick="testCenterPosition()">Test Center Position</button>
+            <button onclick="testSmallSize()">Test Small Size</button>
+            <button onclick="testLargeSize()">Test Large Size</button>
+            <button onclick="testCustomSize()">Test Custom Size (100px)</button>
+            <button onclick="testDefaultSize()">Reset to Default</button>
         </div>
 
         <div class="content">
@@ -108,7 +115,7 @@
             <h3>Expected Behavior:</h3>
             <ul>
                 <li>Yellow circular button with black phone icon</li>
-                <li>Fixed positioning in bottom-right corner</li>
+                <li>Fixed positioning in bottom-right corner (or as configured)</li>
                 <li>Hover effects (scale and shadow)</li>
                 <li>Click to start call</li>
                 <li>Visual feedback during call states</li>
@@ -122,6 +129,13 @@
                 <li><strong>Ended:</strong> Red background (briefly)</li>
             </ul>
 
+            <h3>New Features:</h3>
+            <ul>
+                <li><strong>Position Options:</strong> bottom-right, bottom-left, top-right, top-left, center</li>
+                <li><strong>Size Options:</strong> small (50px), medium (60px), large (80px), custom (40-120px)</li>
+                <li><strong>Custom Sizing:</strong> Specify exact pixel size with customSize property</li>
+            </ul>
+
             <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
             
             <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
@@ -132,7 +146,7 @@
     <script>
         // Configuration for the widget
         window.BuzzwaldConfig = {
-            id: '1792d475-9f91-4886-a59b-801848adf489',
+            id: '',
             position: 'bottom-right',
             backgroundColor: '#FFFF00',
             iconColor: '#000000',
@@ -268,7 +282,7 @@
                 setTimeout(() => {
                     // Restore original config
                     window.BuzzwaldConfig = {
-                        id: '1792d475-9f91-4886-a59b-801848adf489',
+                        id: '',
                         position: 'bottom-right',
                         backgroundColor: '#FFFF00',
                         iconColor: '#000000',
@@ -308,6 +322,113 @@
                 if (window.buzzwaldWidget) {
                     console.log('Timer:', !!window.buzzwaldWidget.usageLimitRetryTimer);
                 }
+            }
+        }
+
+        // New feature test functions
+        function testCenterPosition() {
+            if (window.buzzwaldDestroy) {
+                window.buzzwaldDestroy();
+                setTimeout(() => {
+                    window.BuzzwaldConfig = {
+                        id: '',
+                        position: 'center',
+                        backgroundColor: '#FFFF00',
+                        iconColor: '#000000',
+                        size: 'medium'
+                    };
+                    
+                    import('/src/widget.js').then(module => {
+                        console.log('🎯 Creating centered widget...');
+                        new module.BuzzwaldWidget(window.BuzzwaldConfig);
+                        alert('Widget moved to center!');
+                    });
+                }, 100);
+            }
+        }
+
+        function testSmallSize() {
+            if (window.buzzwaldDestroy) {
+                window.buzzwaldDestroy();
+                setTimeout(() => {
+                    window.BuzzwaldConfig = {
+                        id: '',
+                        position: 'bottom-right',
+                        backgroundColor: '#FFFF00',
+                        iconColor: '#000000',
+                        size: 'small'
+                    };
+                    
+                    import('/src/widget.js').then(module => {
+                        console.log('🔽 Creating small widget...');
+                        new module.BuzzwaldWidget(window.BuzzwaldConfig);
+                        alert('Widget size changed to small (50px)!');
+                    });
+                }, 100);
+            }
+        }
+
+        function testLargeSize() {
+            if (window.buzzwaldDestroy) {
+                window.buzzwaldDestroy();
+                setTimeout(() => {
+                    window.BuzzwaldConfig = {
+                        id: '',
+                        position: 'bottom-right',
+                        backgroundColor: '#FFFF00',
+                        iconColor: '#000000',
+                        size: 'large'
+                    };
+                    
+                    import('/src/widget.js').then(module => {
+                        console.log('🔼 Creating large widget...');
+                        new module.BuzzwaldWidget(window.BuzzwaldConfig);
+                        alert('Widget size changed to large (80px)!');
+                    });
+                }, 100);
+            }
+        }
+
+        function testCustomSize() {
+            if (window.buzzwaldDestroy) {
+                window.buzzwaldDestroy();
+                setTimeout(() => {
+                    window.BuzzwaldConfig = {
+                        id: '',
+                        position: 'bottom-right',
+                        backgroundColor: '#FFFF00',
+                        iconColor: '#000000',
+                        size: 'custom',
+                        customSize: 100
+                    };
+                    
+                    import('/src/widget.js').then(module => {
+                        console.log('📏 Creating custom size widget (100px)...');
+                        new module.BuzzwaldWidget(window.BuzzwaldConfig);
+                        alert('Widget size changed to custom (100px)!');
+                    });
+                }, 100);
+            }
+        }
+
+        function testDefaultSize() {
+            if (window.buzzwaldDestroy) {
+                window.buzzwaldDestroy();
+                setTimeout(() => {
+                    window.BuzzwaldConfig = {
+                        id: '',
+                        position: 'bottom-right',
+                        backgroundColor: '#FFFF00',
+                        iconColor: '#000000',
+                        size: 'medium'
+                    };
+                    
+                    import('/src/widget.js').then(module => {
+                        console.log('🔄 Resetting to default size...');
+                        new module.BuzzwaldWidget(window.BuzzwaldConfig);
+                        alert('Widget reset to default size (60px)!');
+                    });
+                }, 100);
             }
         }
 
