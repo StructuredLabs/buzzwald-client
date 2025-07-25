@@ -138,6 +138,7 @@ export class BuzzwaldWidget {
     // Validate custom size if size is 'custom'
     if (this.config.size === 'custom') {
       if (!this.config.customSize || typeof this.config.customSize !== 'number' || this.config.customSize < 40 || this.config.customSize > 300) {
+        console.log('typeof customSize', typeof this.config.customSize);
         console.warn(`Buzzwald: Invalid custom size "${this.config.customSize}". Using default "medium"`);
         this.config.size = 'medium';
         this.config.customSize = null;
